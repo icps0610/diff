@@ -19,12 +19,12 @@ func compare(arr1, arr2 []string, all []config.Data, compare string) ([]config.D
 
     for idx, ele := range arr1 {
         if arrIncludeIndex(arr2, ele) == -1 {
-            var data config.Data
             if compare == "1" {
-                data = config.Data{idx + 1, ele, ""}
+                ele1, ele2 := ele, ""
             } else {
-                data = config.Data{idx + 1, "", ele}
+                ele1, ele2 := "", ele
             }
+            data := config.Data{idx + 1, ele1, ele2}
             all = append(all, data)
             diff = append(diff, data)
         } else {
