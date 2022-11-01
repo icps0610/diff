@@ -6,23 +6,24 @@ import (
     "diff/config"
 )
 
-func ArrCompare(a1, a2 []config.Data) ([]config.Data, []config.Data, []config.Data, []config.Comp) {
-    var d1, d2, same []config.Data
-    var tmp = map[int]map[int]string{}
-    for _, e1 := range a1 {
-        idx := arrIncludeIndex(a2, e1.Str)
+func ArrCompare(arr1, arr2 []config.Data) ([]config.Data, []config.Data, []config.Data, []config.Comp) {
+    var diff1, diff2, same []config.Data
+    var tmp map[int]map[int]string
+
+    for _, e1 := range arr1 {
+        idx := arrIncludeIndex(arr2, e1.Str)
         if idx != -1 {
             same = append(same, e1)
         } else {
-            d1 = append(d1, e1)
+            diff1 = append(diff1, e1)
             tmp[e1.Idx] = map[int]string{}
             tmp[e1.Idx][0] = e1.Str
         }
     }
-    for _, e2 := range a2 {
-        idx := arrIncludeIndex(a1, e2.Str)
+    for _, e2 := range arr2 {
+        idx := arrIncludeIndex(arr1, e2.Str)
         if idx == -1 {
-            d2 = append(d2, e2)
+            diff2 = append(diff2, e2)
             if tmp[e2.Idx] == nil {
                 tmp[e2.Idx] = map[int]string{}
             }
@@ -31,11 +32,10 @@ func ArrCompare(a1, a2 []config.Data) ([]config.Data, []config.Data, []config.Da
     }
     var all []config.Comp
     for i, v := range tmp {
-        k := to_s(i)
         all = append(all, config.Comp{k, v[0], v[1]})
     }
     bubbleSort(all)
-    return d1, d2, same, all
+    return diff1, diff2, same, all
 }
 
 func CheckKB(arr []config.Data) []config.Data {

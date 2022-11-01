@@ -6,7 +6,7 @@ type Data struct {
 }
 
 type Comp struct {
-    Idx   string
-    Left  string
-    Right string
+    Idx  int
+    Arr1 string
+    Arr2 string
 }
