@@ -8,19 +8,12 @@ import (
     "strings"
 
     "diff/config"
-    "diff/script"
+    // "diff/script"
 )
 
-func Readfile(path string) []config.Data {
+func Readfile(path string) []string {
     content, _ := utfutil.ReadFile(path, utfutil.UTF8)
-    var lines []config.Data
-    for idx, line := range strings.Split(string(content), "\n") {
-        line = strings.TrimSpace(line)
-        if len(line) > 0 {
-            lines = append(lines, config.Data{idx, line})
-        }
-    }
-    return script.ArrUniq(lines)
+    return split(string(content))
 }
 
 func ReadJson(path string) []config.Data {
@@ -30,13 +23,14 @@ func ReadJson(path string) []config.Data {
     printError(err)
     return reaJson
 }
-func ReadJsonC(path string) []config.Comp {
-    file := readContent(path)
-    var reaJson []config.Comp
-    err := json.Unmarshal([]byte(file), &reaJson)
-    printError(err)
-    return reaJson
-}
+
+// func ReadJsonC(path string) []config.Comp {
+//     file := readContent(path)
+//     var reaJson []config.Comp
+//     err := json.Unmarshal([]byte(file), &reaJson)
+//     printError(err)
+//     return reaJson
+// }
 
 func readContent(path string) string {
     dat, err := ioutil.ReadFile(path)
@@ -51,9 +45,24 @@ func SaveJson(datas interface{}, path string) {
     printError(err)
 }
 
+func ReadLines(path string) []string {
+    return split(readContent(path))
+}
+
 func saveLines(lines []string, path string) {
     data := []byte(strings.Join(lines, "\n"))
     ioutil.WriteFile(path, data, 0777)
+}
+
+func split(content string) []string {
+    var lines []string
+    for _, line := range strings.Split(string(content), "\n") {
+        line = strings.TrimSpace(line)
+        if len(line) > 0 {
+            lines = append(lines, line)
+        }
+    }
+    return lines
 }
 
 func printError(err error) {

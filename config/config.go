@@ -1,12 +1,7 @@
 package config
 
 type Data struct {
-    Idx int
-    Str string
-}
-
-type Comp struct {
     Idx  int
-    Arr1 string
-    Arr2 string
+    Ele1 string
+    Ele2 string
 }

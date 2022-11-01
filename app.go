@@ -34,26 +34,25 @@ func main() {
     router.GET("/", func(c *gin.Context) {
         var fName1 = script.DeBase64(c.Query("fName1"))
         var fName2 = script.DeBase64(c.Query("fName2"))
-        var same = 2
-        var diff1, diff2 []config.Data
-        var all []config.Comp
+        var diff1, diff2, all []config.Data
+        var same int
 
         if fName1 != "" && fName2 != "" {
             diff1 = io.ReadJson(d1Path)
             diff2 = io.ReadJson(d2Path)
-            all = io.ReadJsonC(allPath)
+            all = io.ReadJson(allPath)
             if len(diff1) > 0 && len(diff2) > 0 {
-                same = 0
-            } else {
                 same = 1
+            } else {
+                same = 2
             }
         }
 
         c.HTML(http.StatusOK, `index.html`, gin.H{
             "fName1": fName1,
             "fName2": fName2,
-            "diff1":  script.CheckKB(diff1),
-            "diff2":  script.CheckKB(diff2),
+            "diff1":  diff1,
+            "diff2":  diff2,
             "all":    all,
             "same":   same,
         })
@@ -72,7 +71,7 @@ func main() {
             file1 := io.Readfile(tmpDirPath + fNames[0])
             file2 := io.Readfile(tmpDirPath + fNames[1])
 
-            diff1, diff2, _, all := script.ArrCompare(file1, file2)
+            diff1, diff2, all, _ := script.ArrCompare(file1, file2)
 
             io.SaveJson(diff1, d1Path)
             io.SaveJson(diff2, d2Path)

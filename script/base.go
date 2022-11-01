@@ -4,45 +4,30 @@ import (
     "encoding/base64"
     "fmt"
     "regexp"
-    "strconv"
 
     "diff/config"
 )
 
-func ArrUniq(arr []config.Data) []config.Data {
-    var n []config.Data
-    for _, e := range arr {
-        if arrIncludeIndex(n, e.Str) == -1 {
-            n = append(n, e)
-        }
-    }
-    return n
-}
-func arrIncludeIndex(arr []config.Data, str string) int {
+func arrIncludeIndex(arr []string, str string) int {
     for i, e := range arr {
-        if str == e.Str {
+        if str == e {
             return i
         }
     }
     return -1
 }
-func arrRemoveByIndex(arr []config.Data, idx int) []config.Data {
-    arr[idx] = arr[len(arr)-1]
-    return arr[:len(arr)-1]
-}
 
-func bubbleSort(arr []config.Comp) {
+func BubbleSort(arr []config.Data) {
     size := len(arr)
     for i := 0; i < size; i++ {
         for j := 1; j < size; j++ {
-            oi := to_i(arr[j].Idx)
-            ti := to_i(arr[j-1].Idx)
-            if oi < ti {
+            if arr[j].Idx < arr[j-1].Idx {
                 arr[j], arr[j-1] = arr[j-1], arr[j]
             }
         }
     }
 }
+
 func Scans(keyword, str string) []string {
     re := regexp.MustCompile(keyword)
     match := re.FindStringSubmatch(str)
@@ -50,14 +35,6 @@ func Scans(keyword, str string) []string {
         return match[1:]
     }
     return match
-}
-func to_i(s string) int {
-    i, _ := strconv.Atoi(s)
-    return i
-}
-
-func to_s(i int) string {
-    return strconv.Itoa(i)
 }
 
 func EnBase64(str string) string {
