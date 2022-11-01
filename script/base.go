@@ -71,7 +71,7 @@ func DeBase64(str string) string {
     return string(s)
 }
 
-func BaseName(path string) string {
+func BaseName(str string) string {
     return path.Base(str)
 }
 
