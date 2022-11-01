@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="/static/bootstrap.min.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <title>Diff</title>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-1"></div>
+            <div class="col-10"><br>
+                <div id="upload">
+                    <!-- uwmic qfe -->
+                    <h3><a href="/">請選擇兩個檔案</a></h3>
+                    <form action="/" method="post" autocomplete="off" enctype="multipart/form-data">
+                        <div class="input-group mb-3"><input type="file" name="uploads" class="form-control" multiple><input type="submit" class="input-group-text" value="Upload"></div>
+                </div>{{ if eq .same 0 }}
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr class="table-secondary">
+                            <th>line</th>
+                            <th colspan="3">{{ .fName1 }} 與 {{ .fName2 }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>{{ range .all }}<tr>
+                            <td width="5%">{{ .Idx }}</td>
+                            <td id="tdd">{{ .Left }}</td>
+                            <td id="tdd">{{ .Right }}</td>
+                        </tr>{{ end }}</tbody>
+                </table>
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr class="table-primary">
+                            <th colspan="2">{{ .fName1 }} 比 {{ .fName2 }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>{{ range .diff1 }}<tr>
+                            <td>{{ .Str }}</td>
+                        </tr>{{ end }}</tbody>
+                </table>
+                <table class="table table-bordered table-hover ">
+                    <thead>
+                        <tr class="table-success">
+                            <th colspan="2">{{ .fName2 }} 比 {{ .fName1 }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>{{ range .diff2 }}<tr>
+                            <td>{{ .Str }}</td>
+                        </tr>{{ end }}</tbody>
+                </table>{{ end }}{{ if eq .same 1 }}
+                <table class="table table-bordered table-hover ">
+                    <thead>
+                        <tr class="table-info">
+                            <th>檔案相同</th>
+                        </tr>
+                    </thead>
+                    </tbody>
+                </table>{{ end }}
+            </div>
+            <div class="col-1"></div>
+        </div>
+    </div>
+</body>
+<style>
+a {
+    text-decoration: none;
+}
+
+* {
+    text-align: center;
+}
+
+#tdd {
+    width: 45%;
+    word-break: break-all;
+    word-wrap: break-all;
+}
+</style>
+
+</html>
