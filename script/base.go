@@ -3,7 +3,6 @@ package script
 import (
     "encoding/base64"
     "fmt"
-    "path"
     "regexp"
     "strconv"
 
@@ -69,10 +68,6 @@ func DeBase64(str string) string {
     s, err := base64.StdEncoding.DecodeString(str)
     printError(err)
     return string(s)
-}
-
-func BaseName(str string) string {
-    return path.Base(str)
 }
 
 func printError(err error) {

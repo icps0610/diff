@@ -49,8 +49,8 @@ func main() {
         }
 
         c.HTML(http.StatusOK, `index.html`, gin.H{
-            "fName1": script.BaseName(fName1),
-            "fName2": script.BaseName(fName2),
+            "fName1": fName1,
+            "fName2": fName2,
             "diff1":  script.CheckKB(diff1),
             "diff2":  script.CheckKB(diff2),
             "all":    all,
@@ -63,13 +63,13 @@ func main() {
         form, _ := c.MultipartForm()
         for _, f := range form.File["uploads"] {
             path := tmpDirPath + f.Filename
-            fNames = append(fNames, path)
+            fNames = append(fNames, f.Filename)
             c.SaveUploadedFile(f, path)
         }
 
         if len(fNames) > 1 {
-            file1 := io.Readfile(fNames[0])
-            file2 := io.Readfile(fNames[1])
+            file1 := io.Readfile(tmpDirPath + fNames[0])
+            file2 := io.Readfile(tmpDirPath + fNames[1])
 
             diff1, diff2, _, all := script.ArrCompare(file1, file2)
 
