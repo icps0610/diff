@@ -5,6 +5,7 @@ import (
     "github.com/gin-contrib/gzip"
     "github.com/gin-gonic/gin"
     "net/http"
+    "runtime"
 
     "diff/config"
     "diff/io"
@@ -13,7 +14,7 @@ import (
 
 var (
     port       = "3000"
-    tmpDirPath = `/tmp/`
+    tmpDirPath = GetTempPath()
 
     d1Path  = tmpDirPath + "d1.json"
     d2Path  = tmpDirPath + "d2.json"
@@ -83,6 +84,13 @@ func main() {
 
     })
     router.Run(":" + port)
+}
+
+func GetTempPath() string {
+    if runtime.GOOS == "windows" {
+        return `z:\`
+    }
+    return `/tmp/`
 }
 
 var _ = fmt.Println
