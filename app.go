@@ -35,16 +35,16 @@ func main() {
         var fName1 = script.DeBase64(c.Query("fName1"))
         var fName2 = script.DeBase64(c.Query("fName2"))
         var diff1, diff2, allDiff []config.Data
-        var same int
+        var same bool
 
         if fName1 != "" && fName2 != "" {
             diff1 = io.ReadJson(d1Path)
             diff2 = io.ReadJson(d2Path)
             allDiff = io.ReadJson(allPath)
             if len(diff1) > 0 || len(diff2) > 0 {
-                same = 1
+                same = true
             } else {
-                same = 2
+                same = false
             }
         }
 
