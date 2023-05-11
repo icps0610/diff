@@ -5,16 +5,16 @@ import (
     "github.com/gin-contrib/gzip"
     "github.com/gin-gonic/gin"
     "net/http"
-    "runtime"
 
     "diff/config"
+    "diff/diff"
     "diff/io"
     "diff/script"
 )
 
 var (
     port       = "3000"
-    tmpDirPath = GetTmpPath()
+    tmpDirPath = script.GetTempPath()
 
     d1Path  = tmpDirPath + "d1.json"
     d2Path  = tmpDirPath + "d2.json"
@@ -67,29 +67,26 @@ func main() {
             c.SaveUploadedFile(f, path)
         }
 
+        var url string
         if len(fNames) > 1 {
             fileData1 := io.Readfile(tmpDirPath + fNames[0])
             fileData2 := io.Readfile(tmpDirPath + fNames[1])
+            if len(fileData1) > 0 && len(fileData2) > 0 {
 
-            diff1, diff2, all, _ := script.ArrCompare(fileData1, fileData2)
+                diff1, diff2, allDiff, _ := diff.Run(fileData1, fileData2)
 
-            io.SaveJson(diff1, d1Path)
-            io.SaveJson(diff2, d2Path)
-            io.SaveJson(all, allPath)
+                io.SaveJson(diff1, d1Path)
+                io.SaveJson(diff2, d2Path)
+                io.SaveJson(allDiff, allPath)
+            }
+
+            url = fmt.Sprintf(`/?fName1=%s&fName2=%s`, script.EnBase64(fNames[0]), script.EnBase64(fNames[1]))
         }
 
-        url := fmt.Sprintf(`/?fName1=%s&fName2=%s`, script.EnBase64(fNames[0]), script.EnBase64(fNames[1]))
         c.Redirect(http.StatusMovedPermanently, url)
 
     })
     router.Run(":" + port)
-}
-
-func GetTmpPath() string {
-    if runtime.GOOS == "windows" {
-        return `z:\`
-    }
-    return `/tmp/`
 }
 
 var _ = fmt.Println
