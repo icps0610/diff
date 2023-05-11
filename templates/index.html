@@ -19,7 +19,7 @@
                     <h3><a href="/">請選擇兩個檔案</a></h3>
                     <form action="/" method="post" autocomplete="off" enctype="multipart/form-data">
                         <div class="input-group mb-3"><input type="file" name="uploads" class="form-control" multiple><input type="submit" class="input-group-text" value="Upload"></div>
-                </div>{{ if eq .same 1 }}
+                </div>{{ if eq .same false }}
                 <table class="table table-striped table-bordered table-hover">
                     <thead>
                         <tr class="table-secondary">
@@ -52,7 +52,7 @@
                     <tbody>{{ range .diff2 }}<tr>
                             <td>{{ .Ele2 }}</td>
                         </tr>{{ end }}</tbody>
-                </table>{{ end }}{{ if eq .same true }}
+                </table>{{ end }}{{ if eq .same 2 }}
                 <table class="table table-striped table-bordered table-hover">
                     <thead>
                         <tr class="table-info">
