@@ -11,8 +11,9 @@ import (
     // "diff/script"
 )
 
-func Readfile(path string) []string {
-    content, _ := utfutil.ReadFile(path, utfutil.UTF8)
+func Readfile(FilePath string) []string {
+    FilePath = config.TempDirPath + FilePath
+    content, _ := utfutil.ReadFile(FilePath, utfutil.UTF8)
     return split(string(content))
 }
 
@@ -23,14 +24,6 @@ func ReadJson(path string) []config.Data {
     printError(err)
     return reaJson
 }
-
-// func ReadJsonC(path string) []config.Comp {
-//     file := readContent(path)
-//     var reaJson []config.Comp
-//     err := json.Unmarshal([]byte(file), &reaJson)
-//     printError(err)
-//     return reaJson
-// }
 
 func readContent(path string) string {
     dat, err := ioutil.ReadFile(path)

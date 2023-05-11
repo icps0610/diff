@@ -3,7 +3,6 @@ package script
 import (
     "encoding/base64"
     "fmt"
-    "runtime"
 )
 
 func EnBase64(str string) string {
@@ -14,13 +13,6 @@ func DeBase64(str string) string {
     s, err := base64.StdEncoding.DecodeString(str)
     printError(err)
     return string(s)
-}
-
-func GetTempPath() string {
-    if runtime.GOOS == "windows" {
-        return `z:\`
-    }
-    return `/tmp/`
 }
 
 func printError(err error) {
