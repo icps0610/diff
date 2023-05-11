@@ -1,23 +1,24 @@
 package script
 
 import (
-    "fmt"
-
     "diff/config"
 )
 
 func ArrCompare(arr1, arr2 []string) ([]config.Data, []config.Data, []config.Data, []string) {
-    var diff1, diff2, all []config.Data
+    var diff1, diff2, allDiff []config.Data
     var same []string
 
-    diff1, all, same = compare(arr1, arr2, all, true)
-    diff2, all, _ = compare(arr2, arr1, all, false)
+    diff1, same = compare(arr1, arr2, true)
+    diff2, _ = compare(arr2, arr1, false)
 
-    QuickSort(all)
-    return diff1, diff2, all, same
+    allDiff = append(allDiff, diff1...)
+    allDiff = append(allDiff, diff2...)
+
+    QuickSort(allDiff)
+    return diff1, diff2, allDiff, same
 }
 
-func compare(arr1, arr2 []string, all []config.Data, compareOrd bool) ([]config.Data, []config.Data, []string) {
+func compare(arr1, arr2 []string, compareOrd bool) ([]config.Data, []string) {
     diff := make([]config.Data, 0, len(arr1))
     same := make([]string, 0, len(arr1))
 
@@ -36,13 +37,12 @@ func compare(arr1, arr2 []string, all []config.Data, compareOrd bool) ([]config.
                 ele2 = ele
             }
             data := config.Data{idx + 1, ele1, ele2}
-            all = append(all, data)
             diff = append(diff, data)
         } else {
             same = append(same, ele)
         }
     }
-    return diff, all, same
+    return diff, same
 }
 
 // func CheckKB(datas []config.Data) []config.Data {
@@ -64,4 +64,11 @@ func compare(arr1, arr2 []string, all []config.Data, compareOrd bool) ([]config.
 //     return narr
 // }
 
-var _ = fmt.Println
+// func Scans(keyword, str string) []string {
+//     re := regexp.MustCompile(keyword)
+//     match := re.FindStringSubmatch(str)
+//     if len(match) > 0 {
+//         return match[1:]
+//     }
+//     return match
+// }

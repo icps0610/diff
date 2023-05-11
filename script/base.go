@@ -3,19 +3,9 @@ package script
 import (
     "encoding/base64"
     "fmt"
-    "regexp"
 
     "diff/config"
 )
-
-func arrIncludeIndex(arr []string, str string) int {
-    for i, e := range arr {
-        if str == e {
-            return i
-        }
-    }
-    return -1
-}
 
 func QuickSort(arr []config.Data) {
     if len(arr) <= 1 {
@@ -42,15 +32,6 @@ func QuickSort(arr []config.Data) {
 
     QuickSort(arr[:left])
     QuickSort(arr[left+1:])
-}
-
-func Scans(keyword, str string) []string {
-    re := regexp.MustCompile(keyword)
-    match := re.FindStringSubmatch(str)
-    if len(match) > 0 {
-        return match[1:]
-    }
-    return match
 }
 
 func EnBase64(str string) string {
