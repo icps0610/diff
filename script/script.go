@@ -1,28 +1,39 @@
 package script
 
 import (
+    "fmt"
+
     "diff/config"
 )
 
 func ArrCompare(arr1, arr2 []string) ([]config.Data, []config.Data, []config.Data, []string) {
     var diff1, diff2, all []config.Data
     var same []string
-    diff1, all, same = compare(arr1, arr2, all, "1")
-    diff2, all, _ = compare(arr2, arr1, all, "2")
-    BubbleSort(all)
+
+    diff1, all, same = compare(arr1, arr2, all, true)
+    diff2, all, _ = compare(arr2, arr1, all, false)
+
+    QuickSort(all)
     return diff1, diff2, all, same
 }
 
-func compare(arr1, arr2 []string, all []config.Data, compare string) ([]config.Data, []config.Data, []string) {
-    var diff []config.Data
-    var same []string
+func compare(arr1, arr2 []string, all []config.Data, compareOrd bool) ([]config.Data, []config.Data, []string) {
+    diff := make([]config.Data, 0, len(arr1))
+    same := make([]string, 0, len(arr1))
+
+    // 找重複
+    arr2Map := make(map[string]struct{}, len(arr2))
+    for _, ele := range arr2 {
+        arr2Map[ele] = struct{}{}
+    }
 
     for idx, ele := range arr1 {
-        if arrIncludeIndex(arr2, ele) == -1 {
-            if compare == "1" {
-                ele1, ele2 := ele, ""
+        if _, ok := arr2Map[ele]; !ok {
+            var ele1, ele2 string
+            if compareOrd {
+                ele1 = ele
             } else {
-                ele1, ele2 := "", ele
+                ele2 = ele
             }
             data := config.Data{idx + 1, ele1, ele2}
             all = append(all, data)
@@ -52,3 +63,5 @@ func compare(arr1, arr2 []string, all []config.Data, compare string) ([]config.D
 
 //     return narr
 // }
+
+var _ = fmt.Println

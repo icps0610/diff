@@ -17,15 +17,31 @@ func arrIncludeIndex(arr []string, str string) int {
     return -1
 }
 
-func BubbleSort(arr []config.Data) {
-    size := len(arr)
-    for i := 0; i < size; i++ {
-        for j := 1; j < size; j++ {
-            if arr[j].Idx < arr[j-1].Idx {
-                arr[j], arr[j-1] = arr[j-1], arr[j]
-            }
+func QuickSort(arr []config.Data) {
+    if len(arr) <= 1 {
+        return
+    }
+
+    left, right := 0, len(arr)-1
+
+    for i, pivot := 1, arr[0]; i <= right; {
+        switch {
+        case arr[i].Idx < pivot.Idx:
+            left++
+            arr[i], arr[left] = arr[left], arr[i]
+            i++
+        case arr[i].Idx > pivot.Idx:
+            arr[i], arr[right] = arr[right], arr[i]
+            right--
+        default:
+            i++
         }
     }
+
+    arr[0], arr[left] = arr[left], arr[0]
+
+    QuickSort(arr[:left])
+    QuickSort(arr[left+1:])
 }
 
 func Scans(keyword, str string) []string {

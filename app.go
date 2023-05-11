@@ -14,7 +14,7 @@ import (
 
 var (
     port       = "3000"
-    tmpDirPath = GetTempPath()
+    tmpDirPath = GetTmpPath()
 
     d1Path  = tmpDirPath + "d1.json"
     d2Path  = tmpDirPath + "d2.json"
@@ -41,7 +41,7 @@ func main() {
             diff1 = io.ReadJson(d1Path)
             diff2 = io.ReadJson(d2Path)
             all = io.ReadJson(allPath)
-            if len(diff1) > 0 && len(diff2) > 0 {
+            if len(diff1) > 0 || len(diff2) > 0 {
                 same = 1
             } else {
                 same = 2
@@ -68,10 +68,10 @@ func main() {
         }
 
         if len(fNames) > 1 {
-            file1 := io.Readfile(tmpDirPath + fNames[0])
-            file2 := io.Readfile(tmpDirPath + fNames[1])
+            fileData1 := io.Readfile(tmpDirPath + fNames[0])
+            fileData2 := io.Readfile(tmpDirPath + fNames[1])
 
-            diff1, diff2, all, _ := script.ArrCompare(file1, file2)
+            diff1, diff2, all, _ := script.ArrCompare(fileData1, fileData2)
 
             io.SaveJson(diff1, d1Path)
             io.SaveJson(diff2, d2Path)
@@ -85,7 +85,7 @@ func main() {
     router.Run(":" + port)
 }
 
-func GetTempPath() string {
+func GetTmpPath() string {
     if runtime.GOOS == "windows" {
         return `z:\`
     }
