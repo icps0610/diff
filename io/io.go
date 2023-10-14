@@ -7,44 +7,29 @@ import (
     "io/ioutil"
     "strings"
 
-    "diff/config"
+    . "iDiff/conf"
     // "diff/script"
 )
 
-func Readfile(FilePath string) []string {
-    FilePath = config.TempDirPath + FilePath
-    content, _ := utfutil.ReadFile(FilePath, utfutil.UTF8)
+func Readfile(path string) []string {
+    content, _ := utfutil.ReadFile(path, utfutil.UTF8)
     return split(string(content))
 }
 
-func ReadJson(path string) []config.Data {
-    file := readContent(path)
-    var reaJson []config.Data
-    err := json.Unmarshal([]byte(file), &reaJson)
+func ReadJson(path string) []Diff {
+    dat, err := ioutil.ReadFile(path)
+    printError(err)
+    var reaJson []Diff
+    err = json.Unmarshal(dat, &reaJson)
     printError(err)
     return reaJson
 }
 
-func readContent(path string) string {
-    dat, err := ioutil.ReadFile(path)
-    printError(err)
-    return string(dat)
-}
-
 func SaveJson(datas interface{}, path string) {
-    file, err := json.MarshalIndent(datas, "", " ")
+    file, err := json.MarshalIndent(datas, "", "  ")
     printError(err)
     err = ioutil.WriteFile(path, file, 0777)
     printError(err)
-}
-
-func ReadLines(path string) []string {
-    return split(readContent(path))
-}
-
-func saveLines(lines []string, path string) {
-    data := []byte(strings.Join(lines, "\n"))
-    ioutil.WriteFile(path, data, 0777)
 }
 
 func split(content string) []string {
