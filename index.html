@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>目錄比對工具 // DIR_DIFF</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23111827'/><rect x='10' y='14' width='19' height='36' rx='3' fill='none' stroke='%23ef4444' stroke-width='4'/><rect x='35' y='14' width='19' height='36' rx='3' fill='none' stroke='%2310b981' stroke-width='4'/><path d='M15 25h9M15 32h9M40 32h9M40 39h9' stroke='%239ca3af' stroke-width='3' stroke-linecap='round'/></svg>">
+    <style>
+        :root {
+            --bg-color: #090d16;
+            --card-bg: #111827;
+            --panel-bg: #0d131f;
+            --border-color: #1f2937;
+            --border-highlight: #374151;
+            --primary-color: #10b981;
+            --primary-hover: #059669;
+            --accent-blue: #3b82f6;
+            --accent-blue-hover: #2563eb;
+            --text-main: #e5e7eb;
+            --text-muted: #9ca3af;
+            --text-dim: #6b7280;
+
+            /* 差異狀態配色 (深色模式工程師風格) */
+            --diff-bg: rgba(245, 158, 11, 0.08);
+            --diff-border: #f59e0b;
+            --diff-text: #fbbf24;
+
+            --only1-bg: rgba(239, 68, 68, 0.08);
+            --only1-border: #ef4444;
+            --only1-text: #f87171;
+
+            --only2-bg: rgba(59, 130, 246, 0.08);
+            --only2-border: #3b82f6;
+            --only2-text: #60a5fa;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 36px 20px;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.07) 0%, transparent 50%),
+                linear-gradient(to bottom, #090d16, #05080f);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            min-width: 12em;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        h1::before {
+            content: ">_";
+            color: var(--primary-color);
+            font-weight: 800;
+        }
+
+        .version-tag {
+            font-size: 0.75rem;
+            color: var(--primary-color);
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+            margin-bottom: 24px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* 讓兩個選擇目錄區塊排在同一行 */
+        .dir-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 720px) {
+            .dir-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .dir-selector {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 14px 16px;
+            border: 1px dashed var(--border-highlight);
+            border-radius: 8px;
+            background: var(--panel-bg);
+            transition: border-color 0.2s, background-color 0.2s;
+            min-width: 0;
+        }
+
+        .dir-selector:hover {
+            border-color: var(--accent-blue);
+            background: rgba(13, 19, 31, 0.9);
+        }
+
+        button {
+            font-family: inherit;
+            padding: 9px 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #fff;
+            background-color: var(--accent-blue);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--accent-blue-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background-color: #1f2937;
+            color: var(--text-dim);
+            border-color: #374151;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .path-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .path-label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .path-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-dim);
+        }
+
+        .path-meta {
+            font-size: 0.72rem;
+            color: var(--primary-color);
+            opacity: 0.9;
+        }
+
+        .path-display {
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: var(--text-main);
+            word-break: break-all;
+            line-height: 1.35;
+        }
+
+        #btnCompare {
+            width: 100%;
+            padding: 13px;
+            font-size: 1rem;
+            background-color: var(--primary-color);
+            color: #051b11;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        #btnCompare:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+        }
+
+        #btnCompare:disabled {
+            background-color: #1f2937;
+            color: var(--text-dim);
+        }
+
+        #summary {
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--primary-color);
+            border-radius: 6px;
+            color: var(--text-main);
+            display: none;
+        }
+
+        #summary.active {
+            display: block;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #0d131f;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            border-bottom: 1px solid var(--border-highlight);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr {
+            transition: background-color 0.12s;
+        }
+
+        tbody tr:hover {
+            filter: brightness(1.15);
+        }
+
+        .status-diff {
+            background-color: var(--diff-bg);
+        }
+        .status-only1 {
+            background-color: var(--only1-bg);
+        }
+        .status-only2 {
+            background-color: var(--only2-bg);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .status-diff .badge {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--diff-text);
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+
+        .status-only1 .badge {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--only1-text);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .status-only2 .badge {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--only2-text);
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+
+        .size-col {
+            font-variant-numeric: tabular-nums;
+            color: var(--text-muted);
+        }
+
+        /* ===== 模式切換分頁 ===== */
+        .header-left {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .mode-tabs {
+            display: inline-flex;
+            gap: 4px;
+            padding: 4px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .mode-tab {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid transparent;
+            padding: 5px 14px;
+            font-size: 0.85rem;
+        }
+
+        .mode-tab:hover:not(:disabled) {
+            background: rgba(59, 130, 246, 0.12);
+            color: var(--text-main);
+            box-shadow: none;
+            transform: none;
+        }
+
+        .mode-tab.active {
+            background: var(--primary-color);
+            color: #051b11;
+        }
+
+        .mode-tab.active:hover:not(:disabled) {
+            background: var(--primary-hover);
+            color: #fff;
+        }
+
+        .path-meta.need-grant {
+            color: var(--diff-text);
+            cursor: pointer;
+            text-decoration: underline dotted;
+        }
+
+        .dir-selector.drag-over {
+            border-color: var(--primary-color);
+            border-style: solid;
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        /* ===== 文字比對 ===== */
+        .text-options {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 18px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .text-options label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .text-options input[type="checkbox"] {
+            accent-color: var(--primary-color);
+        }
+
+        .text-options select {
+            font-family: inherit;
+            font-size: 0.82rem;
+            color: var(--text-main);
+            background: var(--panel-bg);
+            border: 1px solid var(--border-highlight);
+            border-radius: 4px;
+            padding: 4px 8px;
+        }
+
+        #btnTextCompare {
+            width: 100%;
+            padding: 13px;
+            font-size: 1rem;
+            background-color: var(--primary-color);
+            color: #051b11;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        #btnTextCompare:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+        }
+
+        #btnTextCompare:disabled {
+            background-color: #1f2937;
+            color: var(--text-dim);
+        }
+
+        #textSummary {
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--primary-color);
+            border-radius: 6px;
+            color: var(--text-main);
+        }
+
+        #textSummary.error {
+            border-left-color: var(--only1-border);
+            color: var(--only1-text);
+        }
+
+        .diff-table {
+            table-layout: fixed;
+            font-size: 0.82rem;
+        }
+
+        .diff-table td {
+            padding: 2px 8px;
+            border-bottom: none;
+            vertical-align: top;
+        }
+
+        .diff-table .ln {
+            width: 56px;
+            text-align: right;
+            color: var(--text-dim);
+            background: #0d131f;
+            font-variant-numeric: tabular-nums;
+            user-select: none;
+        }
+
+        .diff-table .code {
+            white-space: pre-wrap;
+            word-break: break-all;
+            tab-size: 4;
+            line-height: 1.5;
+        }
+
+        .diff-table td.code:not(:last-child) {
+            border-right: 1px solid var(--border-highlight);
+        }
+
+        .diff-table thead th {
+            padding: 8px;
+            text-transform: none;
+            word-break: break-all;
+        }
+
+        .diff-table tbody tr:hover {
+            filter: brightness(1.2);
+        }
+
+        .cell-base-chg { background: var(--only1-bg); }
+        .cell-chg { background: rgba(16, 185, 129, 0.10); }
+        .cell-empty { background: rgba(31, 41, 55, 0.35); }
+        .ln.ln-base-chg { color: var(--only1-text); }
+        .ln.ln-chg { color: var(--primary-color); }
+
+        .text-drop {
+            align-items: center;
+        }
+
+        .file-list {
+            display: flex;
+            flex-wrap: wrap;
+            column-gap: 24px;
+            row-gap: 6px;
+            min-width: 0;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        .file-item .path-display {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-break: normal;
+        }
+
+        .file-tag {
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 4px;
+            padding: 1px 7px;
+        }
+
+        .btn-clear {
+            padding: 4px 9px;
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border-highlight);
+        }
+
+        .btn-clear:hover:not(:disabled) {
+            background: var(--only1-bg);
+            color: var(--only1-text);
+            box-shadow: none;
+        }
+
+        .hl-del {
+            background: rgba(239, 68, 68, 0.38);
+            border-radius: 2px;
+        }
+
+        .hl-ins {
+            background: rgba(16, 185, 129, 0.38);
+            border-radius: 2px;
+        }
+
+        .row-skip td {
+            text-align: center;
+            color: var(--text-dim);
+            background: #0d131f;
+            padding: 4px;
+            font-size: 0.78rem;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 版本: 2.2 -->
+
+<div class="container">
+    <div class="header">
+        <div class="header-left">
+            <h1 id="appTitle">目錄比對工具</h1>
+            <div class="mode-tabs" role="tablist">
+                <button class="mode-tab active" data-mode="dir" role="tab">📁 目錄比對</button>
+                <button class="mode-tab" data-mode="text" role="tab">📄 文字檔比對</button>
+            </div>
+        </div>
+        <span class="version-tag">v2.2 // DIFF_ENGINE</span>
+    </div>
+
+    <div id="dirMode">
+    <div class="card controls">
+        <div class="dir-row">
+            <div class="dir-selector">
+                <button id="btnDir1">選取目錄 A</button>
+                <div class="path-info">
+                    <div class="path-label-row">
+                        <span class="path-label">SOURCE DIR [A]</span>
+                        <span id="meta1" class="path-meta"></span>
+                    </div>
+                    <span id="path1" class="path-display">未選取</span>
+                </div>
+            </div>
+            <div class="dir-selector">
+                <button id="btnDir2">選取目錄 B</button>
+                <div class="path-info">
+                    <div class="path-label-row">
+                        <span class="path-label">TARGET DIR [B]</span>
+                        <span id="meta2" class="path-meta"></span>
+                    </div>
+                    <span id="path2" class="path-display">未選取</span>
+                </div>
+            </div>
+        </div>
+        <button id="btnCompare" disabled>開始比對 (重新整理後可能需要授權)</button>
+    </div>
+
+    <div id="summary"></div>
+
+    <div class="table-container" id="tableWrapper" style="display:none;">
+        <table id="resultTable">
+            <thead>
+                <tr>
+                    <th>檔案相對路徑</th>
+                    <th>狀態</th>
+                    <th>目錄 A 大小 (Bytes)</th>
+                    <th>目錄 B 大小 (Bytes)</th>
+                </tr>
+            </thead>
+            <tbody id="resultBody"></tbody>
+        </table>
+    </div>
+    </div>
+
+    <!-- 文字檔比對模式 -->
+    <div id="textMode" hidden>
+        <div class="card controls">
+            <div class="dir-selector text-drop" id="textDrop">
+                <button id="btnPickFiles">選取檔案</button>
+                <div class="path-info">
+                    <div id="textFileList" class="file-list"><span class="path-display">未選取</span></div>
+                    <span id="tmeta" class="path-meta"></span>
+                </div>
+                <button id="btnClearFiles" class="btn-clear" title="清除" hidden>✕</button>
+                <input id="tinput" type="file" multiple hidden />
+            </div>
+            <div class="text-options">
+                <label>編碼
+                    <select id="optEncoding">
+                        <option value="auto">自動 (UTF-8 / Big5)</option>
+                        <option value="utf-8">UTF-8</option>
+                        <option value="big5">Big5</option>
+                        <option value="utf-16le">UTF-16 LE</option>
+                        <option value="shift_jis">Shift_JIS</option>
+                    </select>
+                </label>
+                <label><input type="checkbox" id="optIgnoreWs" /> 忽略空白差異</label>
+                <label><input type="checkbox" id="optIgnoreCase" /> 忽略大小寫</label>
+                <label><input type="checkbox" id="optOnlyDiff" checked /> 僅顯示差異 (前後 3 行)</label>
+            </div>
+            <button id="btnTextCompare" disabled>開始比對文字檔</button>
+        </div>
+
+        <div id="textSummary" hidden></div>
+
+        <div class="table-container" id="textTableWrapper" hidden>
+            <table class="diff-table" id="textTable"></table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let dirHandle1 = null;
+    let dirHandle2 = null;
+
+    // 初始化 IndexedDB 用於儲存目錄代碼與完整路徑備註
+    const DB_NAME = 'DirCompareDB';
+    const STORE_NAME = 'handles';
+
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            let request = indexedDB.open(DB_NAME, 1);
+            request.onupgradeneeded = (e) => {
+                let db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
+                }
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async function saveData(key, value) {
+        let db = await initDB();
+        return new Promise((resolve, reject) => {
+            let tx = db.transaction(STORE_NAME, 'readwrite');
+            let store = tx.objectStore(STORE_NAME);
+            store.put(value, key);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    }
+
+    async function loadData(key) {
+        let db = await initDB();
+        return new Promise((resolve, reject) => {
+            let tx = db.transaction(STORE_NAME, 'readonly');
+            let store = tx.objectStore(STORE_NAME);
+            let request = store.get(key);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    // 取得目錄第一層特徵資訊（協助區分同名目錄）
+    async function inspectDirSummary(dirHandle, metaElId) {
+        const metaEl = document.getElementById(metaElId);
+        try {
+            if ((await dirHandle.queryPermission({ mode: 'read' })) !== 'granted') {
+                metaEl.textContent = '🔒 點此授權讀取';
+                metaEl.classList.add('need-grant');
+                metaEl.onclick = async () => {
+                    if (await verifyPermission(dirHandle)) {
+                        metaEl.onclick = null;
+                        await inspectDirSummary(dirHandle, metaElId);
+                    }
+                };
+                return;
+            }
+            metaEl.classList.remove('need-grant');
+            metaEl.onclick = null;
+            let fileCount = 0;
+            let dirCount = 0;
+            for await (let entry of dirHandle.values()) {
+                if (entry.kind === 'file') fileCount++;
+                else if (entry.kind === 'directory') dirCount++;
+            }
+            metaEl.textContent = `${dirCount} 資料夾 / ${fileCount} 檔案`;
+        } catch (e) {
+            metaEl.textContent = '';
+        }
+    }
+
+    function updateDisplayPath(index, handle, isRestored = false) {
+        const pathEl = document.getElementById(`path${index}`);
+        if (!handle) {
+            pathEl.textContent = '未選取';
+            return;
+        }
+        pathEl.textContent = handle.name + (isRestored ? ' (已還原)' : '');
+    }
+
+    // 檢查與請求目錄讀取權限
+    async function verifyPermission(fileHandle) {
+        const options = { mode: 'read' };
+        if ((await fileHandle.queryPermission(options)) === 'granted') {
+            return true;
+        }
+        if ((await fileHandle.requestPermission(options)) === 'granted') {
+            return true;
+        }
+        return false;
+    }
+
+    // 頁面載入時還原上次的選擇與完整路徑備註
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            dirHandle1 = await loadData('dir1');
+            if (dirHandle1) {
+                updateDisplayPath(1, dirHandle1, true);
+                inspectDirSummary(dirHandle1, 'meta1');
+            }
+            
+            dirHandle2 = await loadData('dir2');
+            if (dirHandle2) {
+                updateDisplayPath(2, dirHandle2, true);
+                inspectDirSummary(dirHandle2, 'meta2');
+            }
+            
+            checkReady();
+        } catch (err) {
+            console.error('無法載入儲存的目錄紀錄', err);
+        }
+    });
+
+    // 開啟選取視窗時，直接定位到上次選取的位置
+    async function openPicker(pickerFn, options, lastHandle) {
+        if (lastHandle) {
+            try {
+                return await pickerFn({ ...options, startIn: lastHandle });
+            } catch (err) {
+                if (err.name === 'AbortError') throw err;
+                console.warn('[picker] 無法定位到上次位置，改用預設位置', err);
+            }
+        }
+        return await pickerFn(options);
+    }
+
+    document.getElementById('btnDir1').addEventListener('click', async () => {
+        try {
+            dirHandle1 = await openPicker(o => window.showDirectoryPicker(o), { id: 'dirA', mode: 'read' }, dirHandle1);
+            await saveData('dir1', dirHandle1);
+            updateDisplayPath(1, dirHandle1, false);
+            await inspectDirSummary(dirHandle1, 'meta1');
+            checkReady();
+        } catch (err) {
+            console.log(err);
+        }
+    });
+
+    document.getElementById('btnDir2').addEventListener('click', async () => {
+        try {
+            dirHandle2 = await openPicker(o => window.showDirectoryPicker(o), { id: 'dirB', mode: 'read' }, dirHandle2);
+            await saveData('dir2', dirHandle2);
+            updateDisplayPath(2, dirHandle2, false);
+            await inspectDirSummary(dirHandle2, 'meta2');
+            checkReady();
+        } catch (err) {
+            console.log(err);
+        }
+    });
+
+    function checkReady() {
+        if (dirHandle1 && dirHandle2) {
+            document.getElementById('btnCompare').disabled = false;
+        }
+    }
+
+    async function scanDirectory(dirHandle, path = '') {
+        let fileMap = new Map();
+        for await (let entry of dirHandle.values()) {
+            let subPath = path ? `${path}/${entry.name}` : entry.name;
+            if (entry.kind === 'file') {
+                try {
+                    let file = await entry.getFile();
+                    fileMap.set(subPath, { size: file.size, file: file });
+                } catch (err) {
+                    console.warn(`無法存取檔案: ${subPath}`, err);
+                }
+            } else if (entry.kind === 'directory') {
+                let subMap = await scanDirectory(entry, subPath);
+                for (let [k, v] of subMap) {
+                    fileMap.set(k, v);
+                }
+            }
+        }
+        return fileMap;
+    }
+
+    document.getElementById('btnCompare').addEventListener('click', async () => {
+        // 確認讀取權限
+        let p1 = await verifyPermission(dirHandle1);
+        let p2 = await verifyPermission(dirHandle2);
+        
+        if (!p1 || !p2) {
+            alert('必須授予讀取權限才能進行比對。');
+            return;
+        }
+
+        await inspectDirSummary(dirHandle1, 'meta1');
+        await inspectDirSummary(dirHandle2, 'meta2');
+
+        const summaryEl = document.getElementById('summary');
+        const tableWrapper = document.getElementById('tableWrapper');
+        summaryEl.classList.add('active');
+        summaryEl.textContent = '⏳ 正在掃描與計算 SHA-256 雜湊比對中...';
+        tableWrapper.style.display = 'none';
+
+        let map1 = await scanDirectory(dirHandle1);
+        let map2 = await scanDirectory(dirHandle2);
+
+        let allKeys = new Set([...map1.keys(), ...map2.keys()]);
+        let results = [];
+
+        let countOnly1 = 0;
+        let countOnly2 = 0;
+        let countDiff = 0;
+        let countSame = 0;
+
+        for (let key of allKeys) {
+            let item1 = map1.get(key);
+            let item2 = map2.get(key);
+
+            if (item1 && !item2) {
+                results.push({ path: key, status: '僅在目錄 A', class: 'status-only1', size1: item1.size.toLocaleString(), size2: '-' });
+                countOnly1++;
+            } else if (!item1 && item2) {
+                results.push({ path: key, status: '僅在目錄 B', class: 'status-only2', size1: '-', size2: item2.size.toLocaleString() });
+                countOnly2++;
+            } else if (item1.size !== item2.size) {
+                results.push({ path: key, status: '大小不同', class: 'status-diff', size1: item1.size.toLocaleString(), size2: item2.size.toLocaleString() });
+                countDiff++;
+            } else {
+                // 大小相同，進一步比對內容雜湊
+                try {
+                    let buf1 = await item1.file.arrayBuffer();
+                    let buf2 = await item2.file.arrayBuffer();
+                    let hash1 = await crypto.subtle.digest('SHA-256', buf1);
+                    let hash2 = await crypto.subtle.digest('SHA-256', buf2);
+
+                    if (toHex(hash1) !== toHex(hash2)) {
+                        results.push({ path: key, status: '內容不同', class: 'status-diff', size1: item1.size.toLocaleString(), size2: item2.size.toLocaleString() });
+                        countDiff++;
+                    } else {
+                        countSame++;
+                    }
+                } catch (err) {
+                    results.push({ path: key, status: '讀取錯誤 (權限或鎖定)', class: 'status-diff', size1: item1.size.toLocaleString(), size2: item2.size.toLocaleString() });
+                    countDiff++;
+                }
+            }
+        }
+
+        summaryEl.textContent = 
+            `[比對完成] 相同檔案: ${countSame} | 差異檔案: ${countDiff} | 僅在 A: ${countOnly1} | 僅在 B: ${countOnly2}`;
+
+        let tbody = document.getElementById('resultBody');
+        tbody.innerHTML = '';
+        
+        // 將結果依路徑排序
+        results.sort((a, b) => a.path.localeCompare(b.path));
+        
+        results.forEach(r => {
+            let tr = document.createElement('tr');
+            tr.className = r.class;
+            tr.innerHTML = `
+                <td>${r.path}</td>
+                <td><span class="badge">${r.status}</span></td>
+                <td class="size-col">${r.size1}</td>
+                <td class="size-col">${r.size2}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        tableWrapper.style.display = 'block';
+    });
+
+    function toHex(buffer) {
+        return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // ===================== 模式切換 =====================
+    function setMode(mode) {
+        const isText = mode === 'text';
+        document.getElementById('dirMode').hidden = isText;
+        document.getElementById('textMode').hidden = !isText;
+        document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+        document.getElementById('appTitle').textContent = isText ? '文字檔比對工具' : '目錄比對工具';
+        document.title = isText ? '文字檔比對工具 // TEXT_DIFF' : '目錄比對工具 // DIR_DIFF';
+        saveData('mode', mode).catch(err => console.error('[mode] 無法儲存模式', err));
+    }
+
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+        tab.addEventListener('click', () => setMode(tab.dataset.mode));
+    });
+
+    // ===================== 文字檔比對 =====================
+    // textSrc[i] = { handle } 或 { file }；1 = A (基準)、2 = B、3 = C (選填)
+    const SLOTS = [1, 2, 3];
+    const SLOT_NAMES = { 1: 'A', 2: 'B', 3: 'C' };
+    const textSrc = { 1: null, 2: null, 3: null };
+    let lastTextResult = null;
+
+    function escapeHtml(str) {
+        return str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function srcName(src) {
+        return src.handle ? src.handle.name : src.file.name;
+    }
+
+    async function getTextFile(index) {
+        const src = textSrc[index];
+        if (!src) throw new Error(`檔案 ${SLOT_NAMES[index]} 未選取`);
+        if (src.file) return src.file;
+        if (!(await verifyPermission(src.handle))) {
+            throw new Error(`未取得檔案 ${SLOT_NAMES[index]} 的讀取權限`);
+        }
+        return await src.handle.getFile();
+    }
+
+    // 目前已選取的來源 (依 A、B、C 順序)
+    function textSources() {
+        return SLOTS.map(i => textSrc[i]).filter(Boolean);
+    }
+
+    // 在同一個區塊內列出已選取的檔案；未授權時顯示可點擊的授權提示
+    async function renderTextFileList(isRestored = false) {
+        const listEl = document.getElementById('textFileList');
+        const metaEl = document.getElementById('tmeta');
+        const used = SLOTS.filter(i => textSrc[i]);
+        document.getElementById('btnClearFiles').hidden = used.length === 0;
+        metaEl.textContent = '';
+        metaEl.classList.remove('need-grant');
+        metaEl.onclick = null;
+
+        if (used.length === 0) {
+            listEl.innerHTML = '<span class="path-display">未選取</span>';
+            return;
+        }
+        const suffix = isRestored ? ' (已還原)' : '';
+        listEl.innerHTML = used.map(i =>
+            `<div class="file-item" title="${escapeHtml(srcName(textSrc[i]))}"><span class="file-tag">${SLOT_NAMES[i]}</span><span class="path-display">${escapeHtml(srcName(textSrc[i]))}${suffix}</span></div>`
+        ).join('');
+
+        const needGrant = [];
+        for (const i of used) {
+            const h = textSrc[i].handle;
+            if (!h) continue;
+            try {
+                if ((await h.queryPermission({ mode: 'read' })) !== 'granted') needGrant.push(h);
+            } catch (err) {
+                console.warn(`[text] 無法查詢檔案 ${SLOT_NAMES[i]} 權限`, err);
+            }
+        }
+        if (needGrant.length > 0) {
+            metaEl.textContent = '🔒 點此授權讀取';
+            metaEl.classList.add('need-grant');
+            metaEl.onclick = async () => {
+                for (const h of needGrant) {
+                    if (!(await verifyPermission(h))) return;
+                }
+                await renderTextFileList(isRestored);
+            };
+        }
+    }
+
+    function checkTextReady() {
+        document.getElementById('btnTextCompare').disabled = !(textSrc[1] && textSrc[2]);
+    }
+
+    // 以清單取代目前選取 (最多 3 個)
+    // 不記憶檔案本身，只記住檔案所在目錄 (存檔案代碼，選取視窗以 startIn 開在其所在目錄)
+    async function setTextSources(list) {
+        for (const i of SLOTS) textSrc[i] = list[i - 1] || null;
+        const withHandle = list.find(src => src && src.handle);
+        if (withHandle) {
+            try {
+                await saveData('textLastDir', withHandle.handle);
+            } catch (err) {
+                console.warn('[text] 無法記憶檔案目錄', err);
+            }
+        }
+        await renderTextFileList();
+        checkTextReady();
+    }
+
+    // 一次 2～3 個：直接取代 (兩個就兩個、三個就三個)
+    // 一次 1 個：接在現有清單後面；已滿 3 個則重新開始
+    async function applyTextSources(sources) {
+        if (sources.length === 0) return;
+        if (sources.length > 3) console.warn(`[text] 收到 ${sources.length} 個檔案，只取前三個`);
+        if (sources.length >= 2) {
+            await setTextSources(sources.slice(0, 3));
+        } else {
+            const current = textSources();
+            await setTextSources(current.length < 3 ? current.concat(sources) : sources);
+        }
+    }
+
+    async function pickTextFiles() {
+        if (!window.showOpenFilePicker) {
+            // 不支援 File System Access API 的瀏覽器，改用一般檔案選取
+            document.getElementById('tinput').click();
+            return;
+        }
+        try {
+            // 開在上次選取檔案所在的目錄
+            const last = (textSrc[1] && textSrc[1].handle) || await loadData('textLastDir');
+            const handles = await openPicker(o => window.showOpenFilePicker(o), { id: 'textFiles', multiple: true }, last);
+            await applyTextSources(handles.map(handle => ({ handle })));
+        } catch (err) {
+            if (err.name !== 'AbortError') console.error('[text] 選取檔案失敗', err);
+        }
+    }
+
+    document.getElementById('btnPickFiles').addEventListener('click', pickTextFiles);
+    document.getElementById('tinput').addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        e.target.value = '';
+        await applyTextSources(files.map(file => ({ file })));
+    });
+    document.getElementById('btnClearFiles').addEventListener('click', () => setTextSources([]));
+
+    // 拖曳檔案到整個區塊
+    (() => {
+        const zone = document.getElementById('textDrop');
+        let dragDepth = 0;
+        zone.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            dragDepth++;
+            zone.classList.add('drag-over');
+        });
+        zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        zone.addEventListener('dragleave', () => {
+            dragDepth = Math.max(0, dragDepth - 1);
+            if (dragDepth === 0) zone.classList.remove('drag-over');
+        });
+        zone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dragDepth = 0;
+            zone.classList.remove('drag-over');
+
+            const items = Array.from(e.dataTransfer.items || []).filter(it => it.kind === 'file');
+            // 必須在第一個 await 之前同步取出所有項目，否則 DataTransfer 會失效
+            const handlePromises = items.map(it => (typeof it.getAsFileSystemHandle === 'function') ? it.getAsFileSystemHandle() : null);
+            const plainFiles = items.map(it => it.getAsFile());
+
+            const sources = [];
+            for (let k = 0; k < items.length; k++) {
+                let handle = null;
+                try {
+                    handle = handlePromises[k] ? await handlePromises[k] : null;
+                } catch (err) {
+                    console.warn('[text] 無法取得拖曳項目的檔案代碼', err);
+                }
+                if (handle && handle.kind === 'directory') {
+                    console.warn(`[text] 略過資料夾: ${handle.name}`);
+                    continue;
+                }
+                if (handle) sources.push({ handle });
+                else if (plainFiles[k]) sources.push({ file: plainFiles[k] });
+            }
+            if (sources.length === 0) {
+                alert('請拖曳文字檔（不支援資料夾）。');
+                return;
+            }
+            await applyTextSources(sources);
+        });
+    })();
+
+    // 避免檔案拖到區塊外時，瀏覽器直接開啟該檔案
+    window.addEventListener('dragover', e => e.preventDefault());
+    window.addEventListener('drop', e => e.preventDefault());
+
+    // 解碼：auto 時先嘗試 UTF-8 (嚴格)，失敗再改用 Big5；並偵測 UTF-16 BOM
+    function decodeText(buf, encoding) {
+        const bytes = new Uint8Array(buf);
+        if (encoding === 'auto') {
+            if (bytes[0] === 0xFF && bytes[1] === 0xFE) return { text: new TextDecoder('utf-16le').decode(bytes), enc: 'UTF-16 LE' };
+            if (bytes[0] === 0xFE && bytes[1] === 0xFF) return { text: new TextDecoder('utf-16be').decode(bytes), enc: 'UTF-16 BE' };
+            try {
+                return { text: new TextDecoder('utf-8', { fatal: true }).decode(bytes), enc: 'UTF-8' };
+            } catch (e) {
+                return { text: new TextDecoder('big5').decode(bytes), enc: 'Big5' };
+            }
+        }
+        return { text: new TextDecoder(encoding).decode(bytes), enc: encoding.toUpperCase() };
+    }
+
+    function splitLines(text) {
+        const lines = text.split(/\r\n|\r|\n/);
+        if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+        return lines;
+    }
+
+    // Myers O(ND) 差異演算法；a、b 為可用 === 比較的陣列
+    // 回傳 [{ t: 'eq'|'del'|'ins', a: idxA, b: idxB }]
+    const MAX_EDIT_DISTANCE = 6000;
+    function myersDiff(a, b) {
+        const n = a.length, m = b.length;
+        // 先去除共同的開頭與結尾，大幅減少運算量
+        let pre = 0;
+        while (pre < n && pre < m && a[pre] === b[pre]) pre++;
+        let suf = 0;
+        while (suf < n - pre && suf < m - pre && a[n - 1 - suf] === b[m - 1 - suf]) suf++;
+
+        const ops = [];
+        for (let i = 0; i < pre; i++) ops.push({ t: 'eq', a: i, b: i });
+
+        const A = a.slice(pre, n - suf), B = b.slice(pre, m - suf);
+        const N = A.length, M = B.length;
+        const mid = [];
+        if (N === 0) {
+            for (let j = 0; j < M; j++) mid.push({ t: 'ins', b: j });
+        } else if (M === 0) {
+            for (let i = 0; i < N; i++) mid.push({ t: 'del', a: i });
+        } else {
+            const max = N + M, offset = max + 1;
+            const v = new Int32Array(2 * max + 3);
+            const trace = [];
+            let found = -1;
+            outer:
+            for (let d = 0; d <= max; d++) {
+                if (d > MAX_EDIT_DISTANCE) {
+                    throw new Error(`差異過大 (超過 ${MAX_EDIT_DISTANCE} 處編輯)，請確認是否選錯檔案或編碼`);
+                }
+                trace.push(v.slice(offset - d, offset + d + 1)); // 第 d 輪開始前的 v[-d..d]
+                for (let k = -d; k <= d; k += 2) {
+                    let x = (k === -d || (k !== d && v[offset + k - 1] < v[offset + k + 1])) ? v[offset + k + 1] : v[offset + k - 1] + 1;
+                    let y = x - k;
+                    while (x < N && y < M && A[x] === B[y]) { x++; y++; }
+                    v[offset + k] = x;
+                    if (x >= N && y >= M) { found = d; break outer; }
+                }
+            }
+            // 回溯
+            let x = N, y = M;
+            for (let d = found; d >= 0; d--) {
+                const vv = trace[d];
+                const get = kk => vv[kk + d];
+                const k = x - y;
+                const prevK = (k === -d || (k !== d && get(k - 1) < get(k + 1))) ? k + 1 : k - 1;
+                const prevX = d === 0 ? 0 : get(prevK);
+                const prevY = d === 0 ? 0 : prevX - prevK;
+                while (x > prevX && y > prevY) { mid.push({ t: 'eq', a: x - 1, b: y - 1 }); x--; y--; }
+                if (d > 0) {
+                    if (x === prevX) mid.push({ t: 'ins', b: y - 1 });
+                    else mid.push({ t: 'del', a: x - 1 });
+                }
+                x = prevX; y = prevY;
+            }
+            mid.reverse();
+        }
+        for (const op of mid) {
+            ops.push({ t: op.t, a: op.a === undefined ? undefined : op.a + pre, b: op.b === undefined ? undefined : op.b + pre });
+        }
+        for (let i = 0; i < suf; i++) ops.push({ t: 'eq', a: n - suf + i, b: m - suf + i });
+        return ops;
+    }
+
+    // 行內字元差異標示
+    function inlineDiff(s1, s2) {
+        const c1 = Array.from(s1), c2 = Array.from(s2);
+        let ops;
+        try {
+            if (c1.length * c2.length > 4_000_000) throw new Error('too long');
+            ops = myersDiff(c1, c2);
+        } catch (e) {
+            return { a: `<span class="hl-del">${escapeHtml(s1)}</span>`, b: `<span class="hl-ins">${escapeHtml(s2)}</span>` };
+        }
+        let ha = '', hb = '', bufA = '', bufB = '', curA = null, curB = null;
+        const flushA = () => { if (bufA) ha += curA ? `<span class="hl-del">${escapeHtml(bufA)}</span>` : escapeHtml(bufA); bufA = ''; };
+        const flushB = () => { if (bufB) hb += curB ? `<span class="hl-ins">${escapeHtml(bufB)}</span>` : escapeHtml(bufB); bufB = ''; };
+        for (const op of ops) {
+            if (op.t === 'eq') {
+                if (curA !== false) { flushA(); curA = false; }
+                if (curB !== false) { flushB(); curB = false; }
+                bufA += c1[op.a]; bufB += c2[op.b];
+            } else if (op.t === 'del') {
+                if (curA !== true) { flushA(); curA = true; }
+                bufA += c1[op.a];
+            } else {
+                if (curB !== true) { flushB(); curB = true; }
+                bufB += c2[op.b];
+            }
+        }
+        flushA(); flushB();
+        return { a: ha, b: hb };
+    }
+
+    // 將差異操作整理成左右並排的列
+    function buildRows(ops, linesA, linesB) {
+        const rows = [];
+        let dels = [], inss = [];
+        const flush = () => {
+            const pairs = Math.min(dels.length, inss.length);
+            for (let i = 0; i < pairs; i++) rows.push({ t: 'mod', a: dels[i], b: inss[i] });
+            for (let i = pairs; i < dels.length; i++) rows.push({ t: 'del', a: dels[i] });
+            for (let i = pairs; i < inss.length; i++) rows.push({ t: 'ins', b: inss[i] });
+            dels = []; inss = [];
+        };
+        for (const op of ops) {
+            if (op.t === 'eq') { flush(); rows.push({ t: 'eq', a: op.a, b: op.b }); }
+            else if (op.t === 'del') dels.push(op.a);
+            else inss.push(op.b);
+        }
+        flush();
+        return rows;
+    }
+
+    // 合併多組「A 對 X」的列：以 A 的行為錨點對齊，各檔案的新增行並排放在錨點之間
+    // 回傳 [{ a: A 行索引 | undefined, cells: [{ t, b } | null, ...] }]
+    function mergeRows(rowLists) {
+        const ptr = rowLists.map(() => 0);
+        const out = [];
+        while (true) {
+            const gaps = rowLists.map((rows, k) => {
+                const g = [];
+                while (ptr[k] < rows.length && rows[ptr[k]].a === undefined) g.push(rows[ptr[k]++]);
+                return g;
+            });
+            const gmax = Math.max(...gaps.map(g => g.length));
+            for (let r = 0; r < gmax; r++) {
+                out.push({ a: undefined, cells: gaps.map(g => g[r] ? { t: 'ins', b: g[r].b } : null) });
+            }
+            if (rowLists.every((rows, k) => ptr[k] >= rows.length)) break;
+
+            const anchors = rowLists.map((rows, k) => rows[ptr[k]++]);
+            const a = anchors[0] && anchors[0].a;
+            if (anchors.some(x => !x || x.a !== a)) throw new Error('內部錯誤：多檔對齊失敗');
+            out.push({ a, cells: anchors.map(x => x.t === 'del' ? { t: 'del' } : { t: x.t, b: x.b }) });
+        }
+        return out;
+    }
+
+    function renderTextRows() {
+        if (!lastTextResult) return;
+        const { rows, lines, names } = lastTextResult;
+        const K = lines.length - 1; // 比對對象數量 (1 或 2)
+        const onlyDiff = document.getElementById('optOnlyDiff').checked;
+        const CONTEXT = 3;
+
+        const isChanged = r => r.a === undefined || r.cells.some(c => c.t !== 'eq');
+        let visible = null;
+        if (onlyDiff) {
+            visible = new Uint8Array(rows.length);
+            rows.forEach((r, i) => {
+                if (isChanged(r)) {
+                    for (let j = Math.max(0, i - CONTEXT); j <= Math.min(rows.length - 1, i + CONTEXT); j++) visible[j] = 1;
+                }
+            });
+        }
+
+        const cols = lines.length * 2;
+        const html = [];
+        html.push('<colgroup>' + lines.map(() => '<col style="width:56px"><col>').join('') + '</colgroup>');
+        html.push('<thead><tr>' + names.map((n, k) => `<th colspan="2">${'ABC'[k]} · ${escapeHtml(n)}</th>`).join('') + '</tr></thead><tbody>');
+
+        let skipped = 0;
+        const flushSkip = () => {
+            if (skipped > 0) html.push(`<tr class="row-skip"><td colspan="${cols}">⋯ 略過 ${skipped.toLocaleString()} 行相同內容 ⋯</td></tr>`);
+            skipped = 0;
+        };
+
+        rows.forEach((r, i) => {
+            if (visible && !visible[i]) { skipped++; return; }
+            flushSkip();
+            let tr = '<tr>';
+
+            // A (基準) 欄
+            if (r.a === undefined) {
+                tr += '<td class="ln"></td><td class="code cell-empty"></td>';
+            } else {
+                const chg = isChanged(r);
+                let content = escapeHtml(lines[0][r.a]);
+                if (K === 1 && r.cells[0].t === 'mod') content = inlineDiff(lines[0][r.a], lines[1][r.cells[0].b]).a;
+                tr += `<td class="ln${chg ? ' ln-base-chg' : ''}">${r.a + 1}</td><td class="code${chg ? ' cell-base-chg' : ''}">${content}</td>`;
+            }
+
+            // B、C 欄
+            r.cells.forEach((c, k) => {
+                const L = lines[k + 1];
+                if (!c || c.t === 'del') {
+                    tr += '<td class="ln"></td><td class="code cell-empty"></td>';
+                } else if (c.t === 'eq') {
+                    tr += `<td class="ln">${c.b + 1}</td><td class="code">${escapeHtml(L[c.b])}</td>`;
+                } else {
+                    const content = c.t === 'mod' ? inlineDiff(lines[0][r.a], L[c.b]).b : escapeHtml(L[c.b]);
+                    tr += `<td class="ln ln-chg">${c.b + 1}</td><td class="code cell-chg">${content}</td>`;
+                }
+            });
+            html.push(tr + '</tr>');
+        });
+        flushSkip();
+        html.push('</tbody>');
+
+        document.getElementById('textTable').innerHTML = html.join('');
+        document.getElementById('textTableWrapper').hidden = rows.length === 0;
+    }
+
+    async function runTextCompare() {
+        const summaryEl = document.getElementById('textSummary');
+        summaryEl.hidden = false;
+        summaryEl.classList.remove('error');
+        summaryEl.textContent = '⏳ 正在讀取與比對文字檔...';
+        document.getElementById('textTableWrapper').hidden = true;
+
+        try {
+            const slots = SLOTS.filter(i => textSrc[i]);
+            const encoding = document.getElementById('optEncoding').value;
+            const ignoreWs = document.getElementById('optIgnoreWs').checked;
+            const ignoreCase = document.getElementById('optIgnoreCase').checked;
+
+            const lines = [];
+            const names = [];
+            for (const i of slots) {
+                const f = await getTextFile(i);
+                lines.push(splitLines(decodeText(await f.arrayBuffer(), encoding).text));
+                names.push(f.name);
+            }
+
+            // 將每行正規化後轉成整數 ID，加速比對
+            const idMap = new Map();
+            const toId = line => {
+                let key = line;
+                if (ignoreWs) key = key.replace(/\s+/g, ' ').trim();
+                if (ignoreCase) key = key.toLowerCase();
+                let id = idMap.get(key);
+                if (id === undefined) { id = idMap.size; idMap.set(key, id); }
+                return id;
+            };
+            const ids = lines.map(L => L.map(toId));
+
+            console.time('[text] diff');
+            const rowLists = ids.slice(1).map((idsX, k) => buildRows(myersDiff(ids[0], idsX), lines[0], lines[k + 1]));
+            console.timeEnd('[text] diff');
+
+            const parts = rowLists.map((rows, k) => {
+                let cMod = 0, cDel = 0, cIns = 0;
+                rows.forEach(r => {
+                    if (r.t === 'mod') cMod++;
+                    else if (r.t === 'del') cDel++;
+                    else if (r.t === 'ins') cIns++;
+                });
+                const label = `A↔${'BC'[k]}`;
+                return cMod + cDel + cIns === 0 ? `${label}：相同` : `${label}：修改 ${cMod}、刪除 ${cDel}、新增 ${cIns} 行`;
+            });
+
+            const rows = mergeRows(rowLists);
+            lastTextResult = { rows, lines, names };
+
+            if (parts.every(p => p.endsWith('相同'))) {
+                summaryEl.textContent = '[比對完成] ✅ 檔案內容完全相同';
+                return;
+            }
+            summaryEl.textContent = `[比對完成] ${parts.join(' | ')}`;
+            renderTextRows();
+        } catch (err) {
+            console.error('[text] 比對失敗', err);
+            summaryEl.classList.add('error');
+            summaryEl.textContent = `❌ 比對失敗：${err.message}`;
+        }
+    }
+
+    document.getElementById('btnTextCompare').addEventListener('click', runTextCompare);
+    document.getElementById('optOnlyDiff').addEventListener('change', renderTextRows);
+
+    // 還原上次的模式 (文字檔不還原檔案，只記憶目錄)
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const mode = await loadData('mode');
+            if (mode === 'text') setMode('text');
+            // 清除舊版 (v1.9 以前) 記憶的檔案
+            for (const i of SLOTS) await saveData(`tfile${i}`, null);
+        } catch (err) {
+            console.error('[text] 無法還原模式', err);
+        }
+    });
+</script>
+
+</body>
+</html>
