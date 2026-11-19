@@ -82,15 +82,6 @@
             font-weight: 800;
         }
 
-        .version-tag {
-            font-size: 0.75rem;
-            color: var(--primary-color);
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            padding: 3px 8px;
-            border-radius: 4px;
-        }
-
         .card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -177,20 +168,6 @@
             flex: 1;
         }
 
-        .path-label-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-        }
-
-        .path-label {
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: var(--text-dim);
-        }
-
         .path-meta {
             font-size: 0.72rem;
             color: var(--primary-color);
@@ -203,6 +180,33 @@
             color: var(--text-main);
             word-break: break-all;
             line-height: 1.35;
+        }
+
+        /* 目錄 A = 紅、目錄 B = 藍 (與比對結果配色一致) */
+        #btnDir1 {
+            background-color: rgba(185, 28, 28, 0.55);
+        }
+
+        #btnDir1:hover:not(:disabled) {
+            background-color: rgba(185, 28, 28, 0.75);
+            box-shadow: 0 4px 12px rgba(185, 28, 28, 0.3);
+        }
+
+        #btnDir2 {
+            background-color: rgba(29, 78, 216, 0.55);
+        }
+
+        #btnDir2:hover:not(:disabled) {
+            background-color: rgba(29, 78, 216, 0.75);
+            box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+        }
+
+        .dir-selector:has(#btnDir1):hover {
+            border-color: var(--only1-border);
+        }
+
+        .dir-selector:has(#btnDir2):hover {
+            border-color: var(--only2-border);
         }
 
         #btnCompare {
@@ -242,31 +246,47 @@
             display: block;
         }
 
+        /* 摘要切換按鈕：關閉 = 暗灰虛線；開啟 = 與表格標籤同色 */
         .sum-toggle {
             padding: 2px 10px;
             font-size: 0.9rem;
             font-weight: 600;
-            color: var(--text-muted);
+            color: var(--text-dim);
             background: transparent;
-            border: 1px solid var(--border-highlight);
+            border: 1px dashed var(--border-highlight);
         }
 
         .sum-toggle:hover:not(:disabled) {
-            background: rgba(156, 163, 175, 0.12);
-            color: var(--text-main);
+            filter: brightness(1.25);
             box-shadow: none;
             transform: none;
+            background: transparent;
         }
 
         .sum-toggle.active {
-            color: #051b11;
-            background: var(--primary-color);
-            border-color: var(--primary-color);
+            border-style: solid;
         }
 
         .sum-toggle.active:hover:not(:disabled) {
-            background: var(--primary-hover);
-            color: #fff;
+            filter: brightness(1.25);
+        }
+
+        .sum-toggle.active[data-cls="status-same"] {
+            color: var(--text-muted);
+            background: rgba(156, 163, 175, 0.12);
+            border-color: rgba(156, 163, 175, 0.4);
+        }
+
+        .sum-toggle.active[data-cls="status-only1"] {
+            color: var(--only1-text);
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .sum-toggle.active[data-cls="status-only2"] {
+            color: var(--only2-text);
+            background: rgba(59, 130, 246, 0.15);
+            border-color: rgba(59, 130, 246, 0.5);
         }
 
         .table-container {
@@ -358,12 +378,23 @@
             border-color: rgba(156, 163, 175, 0.3);
         }
 
+        /* 只比對檔名時不顯示大小欄 */
+        #resultTable.no-size .size-col {
+            display: none;
+        }
+
         .size-col {
             font-variant-numeric: tabular-nums;
             color: var(--text-muted);
         }
 
         /* ===== 模式切換分頁 ===== */
+        .dir-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            margin: -12px 0 10px;
+        }
+
         .header-left {
             display: flex;
             align-items: center;
@@ -609,7 +640,7 @@
 </head>
 <body>
 
-<!-- 版本: 2.5 -->
+<!-- 版本: 3.7 -->
 
 <div class="container">
     <div class="header">
@@ -620,30 +651,26 @@
                 <button class="mode-tab" data-mode="text" role="tab">📄 文字檔比對</button>
             </div>
         </div>
-        <span class="version-tag">v2.5 // DIFF_ENGINE</span>
     </div>
 
     <div id="dirMode">
+    <div class="dir-toolbar">
+        <label class="text-options"><input type="checkbox" id="optHash" /> 同時比對內容 (SHA-256)</label>
+    </div>
     <div class="card controls">
         <div class="dir-row">
             <div class="dir-selector">
                 <button id="btnDir1">選取目錄 A</button>
                 <div class="path-info">
-                    <div class="path-label-row">
-                        <span class="path-label">SOURCE DIR [A]</span>
-                        <span id="meta1" class="path-meta"></span>
-                    </div>
                     <span id="path1" class="path-display">未選取</span>
+                    <span id="meta1" class="path-meta"></span>
                 </div>
             </div>
             <div class="dir-selector">
                 <button id="btnDir2">選取目錄 B</button>
                 <div class="path-info">
-                    <div class="path-label-row">
-                        <span class="path-label">TARGET DIR [B]</span>
-                        <span id="meta2" class="path-meta"></span>
-                    </div>
                     <span id="path2" class="path-display">未選取</span>
+                    <span id="meta2" class="path-meta"></span>
                 </div>
             </div>
         </div>
@@ -658,8 +685,8 @@
                 <tr>
                     <th>檔案相對路徑</th>
                     <th>狀態</th>
-                    <th>目錄 A 大小 (Bytes)</th>
-                    <th>目錄 B 大小 (Bytes)</th>
+                    <th class="size-col">目錄 A 大小</th>
+                    <th class="size-col">目錄 B 大小</th>
                 </tr>
             </thead>
             <tbody id="resultBody"></tbody>
@@ -862,11 +889,16 @@
         }
     }
 
-    async function scanDirectory(dirHandle, path = '') {
+    // withFile = false 時只收集檔名，不讀取檔案 (速度最快)
+    async function scanDirectory(dirHandle, path = '', withFile = true) {
         let fileMap = new Map();
         for await (let entry of dirHandle.values()) {
             let subPath = path ? `${path}/${entry.name}` : entry.name;
             if (entry.kind === 'file') {
+                if (!withFile) {
+                    fileMap.set(subPath, { size: null, file: null });
+                    continue;
+                }
                 try {
                     let file = await entry.getFile();
                     fileMap.set(subPath, { size: file.size, file: file });
@@ -874,7 +906,7 @@
                     console.warn(`無法存取檔案: ${subPath}`, err);
                 }
             } else if (entry.kind === 'directory') {
-                let subMap = await scanDirectory(entry, subPath);
+                let subMap = await scanDirectory(entry, subPath, withFile);
                 for (let [k, v] of subMap) {
                     fileMap.set(k, v);
                 }
@@ -899,11 +931,22 @@
         const summaryEl = document.getElementById('summary');
         const tableWrapper = document.getElementById('tableWrapper');
         summaryEl.classList.add('active');
-        summaryEl.textContent = '⏳ 正在掃描與計算 SHA-256 雜湊比對中...';
+        const withHash = document.getElementById('optHash').checked;
+        summaryEl.textContent = withHash ? '⏳ 正在掃描與計算 SHA-256 雜湊比對中...' : '⏳ 正在掃描檔名比對中...';
         tableWrapper.style.display = 'none';
 
-        let map1 = await scanDirectory(dirHandle1);
-        let map2 = await scanDirectory(dirHandle2);
+        console.time('[dir] compare');
+        let map1 = await scanDirectory(dirHandle1, '', withHash);
+        let map2 = await scanDirectory(dirHandle2, '', withHash);
+        // 自動換算單位 (B / KB / MB / GB)
+        const fmtSize = item => {
+            if (item.size === null) return '-';
+            const n = item.size;
+            if (n < 1024) return `${n} B`;
+            if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`;
+            if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(2)} MB`;
+            return `${(n / 1024 ** 3).toFixed(2)} GB`;
+        };
 
         let allKeys = new Set([...map1.keys(), ...map2.keys()]);
         let results = [];
@@ -918,13 +961,17 @@
             let item2 = map2.get(key);
 
             if (item1 && !item2) {
-                results.push({ path: key, status: 'A', class: 'status-only1', size1: item1.size.toLocaleString(), size2: '-' });
+                results.push({ path: key, status: 'A', class: 'status-only1', size1: fmtSize(item1), size2: '-' });
                 countOnly1++;
             } else if (!item1 && item2) {
-                results.push({ path: key, status: 'B', class: 'status-only2', size1: '-', size2: item2.size.toLocaleString() });
+                results.push({ path: key, status: 'B', class: 'status-only2', size1: '-', size2: fmtSize(item2) });
                 countOnly2++;
+            } else if (!withHash) {
+                // 只比對檔名
+                results.push({ path: key, status: '同名', class: 'status-same', size1: '-', size2: '-' });
+                countSame++;
             } else if (item1.size !== item2.size) {
-                results.push({ path: key, status: '大小不同', class: 'status-diff', size1: item1.size.toLocaleString(), size2: item2.size.toLocaleString() });
+                results.push({ path: key, status: '大小不同', class: 'status-diff', size1: fmtSize(item1), size2: fmtSize(item2) });
                 countDiff++;
             } else {
                 // 大小相同，進一步比對內容雜湊
@@ -935,42 +982,51 @@
                     let hash2 = await crypto.subtle.digest('SHA-256', buf2);
 
                     if (toHex(hash1) !== toHex(hash2)) {
-                        results.push({ path: key, status: '內容不同', class: 'status-diff', size1: item1.size.toLocaleString(), size2: item2.size.toLocaleString() });
+                        results.push({ path: key, status: '內容不同', class: 'status-diff', size1: fmtSize(item1), size2: fmtSize(item2) });
                         countDiff++;
                     } else {
-                        results.push({ path: key, status: '相同', class: 'status-same', size1: item1.size.toLocaleString(), size2: item2.size.toLocaleString() });
+                        results.push({ path: key, status: '相同', class: 'status-same', size1: fmtSize(item1), size2: fmtSize(item2) });
                         countSame++;
                     }
                 } catch (err) {
-                    results.push({ path: key, status: '讀取錯誤 (權限或鎖定)', class: 'status-diff', size1: item1.size.toLocaleString(), size2: item2.size.toLocaleString() });
+                    results.push({ path: key, status: '讀取錯誤 (權限或鎖定)', class: 'status-diff', size1: fmtSize(item1), size2: fmtSize(item2) });
                     countDiff++;
                 }
             }
         }
 
+        console.timeEnd('[dir] compare');
         summaryEl.innerHTML =
-            `[比對完成] <button id="btnShowSame" class="sum-toggle" title="切換是否顯示相同檔案">相同檔案: ${countSame}</button> | 差異檔案: ${countDiff} | 僅在 A: ${countOnly1} | 僅在 B: ${countOnly2}`;
-        document.getElementById('btnShowSame').addEventListener('click', () => {
-            showSameFiles = !showSameFiles;
-            renderDirResults();
+            `[比對完成] <button class="sum-toggle" data-cls="status-same" title="切換是否顯示">${withHash ? '相同檔案' : '同名檔案'}: ${countSame}</button>` +
+            (withHash ? ` | 差異檔案: ${countDiff}` : '') +
+            ` | <button class="sum-toggle" data-cls="status-only1" title="切換是否顯示">僅在 A: ${countOnly1}</button>` +
+            ` | <button class="sum-toggle" data-cls="status-only2" title="切換是否顯示">僅在 B: ${countOnly2}</button>`;
+        summaryEl.querySelectorAll('.sum-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cls = btn.dataset.cls;
+                dirFilter[cls] = !dirFilter[cls];
+                renderDirResults();
+            });
         });
 
         // 將結果依路徑排序
         results.sort((a, b) => a.path.localeCompare(b.path));
         lastDirResults = results;
+        document.getElementById('resultTable').classList.toggle('no-size', !withHash);
         renderDirResults();
         tableWrapper.style.display = 'block';
     });
 
-    // 目錄比對結果；相同檔案預設不顯示
+    // 目錄比對結果顯示篩選：相同預設不顯示，僅在 A / B 預設顯示
     let lastDirResults = [];
-    let showSameFiles = false;
+    const dirFilter = { 'status-same': false, 'status-only1': true, 'status-only2': true };
 
     function renderDirResults() {
-        const btn = document.getElementById('btnShowSame');
-        if (btn) btn.classList.toggle('active', showSameFiles);
+        document.querySelectorAll('#summary .sum-toggle').forEach(btn => {
+            btn.classList.toggle('active', dirFilter[btn.dataset.cls]);
+        });
 
-        const rows = showSameFiles ? lastDirResults : lastDirResults.filter(r => r.class !== 'status-same');
+        const rows = lastDirResults.filter(r => dirFilter[r.class] !== false);
         document.getElementById('resultBody').innerHTML = rows.map(r =>
             `<tr class="${r.class}"><td>${escapeHtml(r.path)}</td><td><span class="badge">${r.status}</span></td><td class="size-col">${r.size1}</td><td class="size-col">${r.size2}</td></tr>`
         ).join('');
