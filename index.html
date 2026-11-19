@@ -242,6 +242,33 @@
             display: block;
         }
 
+        .sum-toggle {
+            padding: 2px 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: transparent;
+            border: 1px solid var(--border-highlight);
+        }
+
+        .sum-toggle:hover:not(:disabled) {
+            background: rgba(156, 163, 175, 0.12);
+            color: var(--text-main);
+            box-shadow: none;
+            transform: none;
+        }
+
+        .sum-toggle.active {
+            color: #051b11;
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .sum-toggle.active:hover:not(:disabled) {
+            background: var(--primary-hover);
+            color: #fff;
+        }
+
         .table-container {
             overflow-x: auto;
             border-radius: 10px;
@@ -319,6 +346,16 @@
             background: rgba(59, 130, 246, 0.15);
             color: var(--only2-text);
             border-color: rgba(59, 130, 246, 0.4);
+        }
+
+        .status-same {
+            color: var(--text-dim);
+        }
+
+        .status-same .badge {
+            background: rgba(156, 163, 175, 0.1);
+            color: var(--text-muted);
+            border-color: rgba(156, 163, 175, 0.3);
         }
 
         .size-col {
@@ -572,7 +609,7 @@
 </head>
 <body>
 
-<!-- 版本: 2.2 -->
+<!-- 版本: 2.5 -->
 
 <div class="container">
     <div class="header">
@@ -583,7 +620,7 @@
                 <button class="mode-tab" data-mode="text" role="tab">📄 文字檔比對</button>
             </div>
         </div>
-        <span class="version-tag">v2.2 // DIFF_ENGINE</span>
+        <span class="version-tag">v2.5 // DIFF_ENGINE</span>
     </div>
 
     <div id="dirMode">
@@ -881,10 +918,10 @@
             let item2 = map2.get(key);
 
             if (item1 && !item2) {
-                results.push({ path: key, status: '僅在目錄 A', class: 'status-only1', size1: item1.size.toLocaleString(), size2: '-' });
+                results.push({ path: key, status: 'A', class: 'status-only1', size1: item1.size.toLocaleString(), size2: '-' });
                 countOnly1++;
             } else if (!item1 && item2) {
-                results.push({ path: key, status: '僅在目錄 B', class: 'status-only2', size1: '-', size2: item2.size.toLocaleString() });
+                results.push({ path: key, status: 'B', class: 'status-only2', size1: '-', size2: item2.size.toLocaleString() });
                 countOnly2++;
             } else if (item1.size !== item2.size) {
                 results.push({ path: key, status: '大小不同', class: 'status-diff', size1: item1.size.toLocaleString(), size2: item2.size.toLocaleString() });
@@ -901,6 +938,7 @@
                         results.push({ path: key, status: '內容不同', class: 'status-diff', size1: item1.size.toLocaleString(), size2: item2.size.toLocaleString() });
                         countDiff++;
                     } else {
+                        results.push({ path: key, status: '相同', class: 'status-same', size1: item1.size.toLocaleString(), size2: item2.size.toLocaleString() });
                         countSame++;
                     }
                 } catch (err) {
@@ -910,28 +948,33 @@
             }
         }
 
-        summaryEl.textContent = 
-            `[比對完成] 相同檔案: ${countSame} | 差異檔案: ${countDiff} | 僅在 A: ${countOnly1} | 僅在 B: ${countOnly2}`;
+        summaryEl.innerHTML =
+            `[比對完成] <button id="btnShowSame" class="sum-toggle" title="切換是否顯示相同檔案">相同檔案: ${countSame}</button> | 差異檔案: ${countDiff} | 僅在 A: ${countOnly1} | 僅在 B: ${countOnly2}`;
+        document.getElementById('btnShowSame').addEventListener('click', () => {
+            showSameFiles = !showSameFiles;
+            renderDirResults();
+        });
 
-        let tbody = document.getElementById('resultBody');
-        tbody.innerHTML = '';
-        
         // 將結果依路徑排序
         results.sort((a, b) => a.path.localeCompare(b.path));
-        
-        results.forEach(r => {
-            let tr = document.createElement('tr');
-            tr.className = r.class;
-            tr.innerHTML = `
-                <td>${r.path}</td>
-                <td><span class="badge">${r.status}</span></td>
-                <td class="size-col">${r.size1}</td>
-                <td class="size-col">${r.size2}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        lastDirResults = results;
+        renderDirResults();
         tableWrapper.style.display = 'block';
     });
+
+    // 目錄比對結果；相同檔案預設不顯示
+    let lastDirResults = [];
+    let showSameFiles = false;
+
+    function renderDirResults() {
+        const btn = document.getElementById('btnShowSame');
+        if (btn) btn.classList.toggle('active', showSameFiles);
+
+        const rows = showSameFiles ? lastDirResults : lastDirResults.filter(r => r.class !== 'status-same');
+        document.getElementById('resultBody').innerHTML = rows.map(r =>
+            `<tr class="${r.class}"><td>${escapeHtml(r.path)}</td><td><span class="badge">${r.status}</span></td><td class="size-col">${r.size1}</td><td class="size-col">${r.size2}</td></tr>`
+        ).join('');
+    }
 
     function toHex(buffer) {
         return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
